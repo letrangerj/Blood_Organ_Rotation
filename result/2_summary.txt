@@ -1,0 +1,2 @@
+total_cpg_sites	significant_sites	selected_sites	pval_threshold	effect_threshold	positive_correlations	negative_correlations
+1188	86	86	0.05	0.2	45	41

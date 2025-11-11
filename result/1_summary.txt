@@ -1,0 +1,8 @@
+Phase 1 - Data Preparation Summary
+========================================
+Number of samples: 104
+Number of CpG sites: 1234
+Age range: 20 - 84 years
+Age mean: 50.42 years
+Missing values in methylation data: 5153 (4.02%)
+Out of range methylation values: 0

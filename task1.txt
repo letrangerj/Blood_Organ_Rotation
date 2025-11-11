@@ -1,0 +1,12 @@
+## 衰老时钟
+用所有器官overlap的位点信息，选feature，然后建立衰老时钟
+
+**aim**
+关联”位点甲基化-年龄“
+1. 计算pcc correlation，选那些和年龄相关的位点
+2. 应用线性模型建立衰老时钟
+
+
+**input**
+- overlap_cfDNA.tsv: 这是位点上的甲基化值，每一列代表一个sample
+- Metadata_PY_104.csv: metadata里有sample的年龄信息，其中ID和列名是一一对应的
