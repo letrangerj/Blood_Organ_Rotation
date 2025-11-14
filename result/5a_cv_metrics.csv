@@ -1,0 +1,2 @@
+MAE,RMSE,R2,Correlation,n_samples,n_features,mean_optimal_alpha,mean_optimal_l1_ratio,std_optimal_alpha,std_optimal_l1_ratio
+6.394345674763072,7.944919880519809,0.8549162066665098,0.9262319677077272,104,86,0.7603457268169815,0.1,0.09653301636781747,0.0
