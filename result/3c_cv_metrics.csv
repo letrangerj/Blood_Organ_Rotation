@@ -1,0 +1,2 @@
+MAE,RMSE,R2,Correlation,n_samples,n_features,mean_optimal_components,std_optimal_components
+5.92097819158629,7.564556380538879,0.8684754615773064,0.931978511094041,104,86,2.0,0.0

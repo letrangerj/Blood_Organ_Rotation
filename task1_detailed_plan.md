@@ -1,7 +1,7 @@
 # Aging Clock Development Plan: Detailed Task Breakdown
 
 ## Project Overview
-Build an aging clock using cell-free DNA (cfDNA) methylation data to predict chronological age based on CpG site methylation patterns.
+Build comprehensive aging clock models using cell-free DNA (cfDNA) methylation data to predict chronological age based on CpG site methylation patterns. This project implements multiple machine learning algorithms (LASSO, Elastic Net, Ridge, PLSR, SVR, Random Forest, XGBoost, LightGBM) with nested cross-validation and includes age-correlation analysis to correct for systematic prediction bias.
 
 ---
 
@@ -247,63 +247,218 @@ Given small sample size (n=105):
 
 ---
 
-### Phase 5: Results Interpretation & Visualization
+### Phase 5: Extended Model Reproduction with Multiple Algorithms
 
-#### Step 5.1: Model Performance Visualization
-- **Predicted vs. Actual Age Plot**
-  - Scatter plot using nested CV predictions (outer LOOCV) with diagonal reference line
-  - Color-code by gender or age group
-  - Add correlation coefficient and R²
+#### Step 5.1: Reproduce Models with Additional Algorithms
+Build aging clock models using different machine learning algorithms following the exact same framework as Phase 3 and 3a:
 
-- **Residual Plot**
-  - Residuals vs. actual age using nested CV predictions
-  - Horizontal reference line at y=0
-  - Assess systematic bias
+**Models to implement:**
+- **Ridge Regression**: L2 regularization for stable linear modeling
+- **PLSR (Partial Least Squares Regression)**: Handles multicollinearity and dimensionality reduction
+- **SVR (Support Vector Regression)**: Non-linear modeling with kernel methods
+- **RF (Random Forest)**: Ensemble tree-based method for non-linear patterns
+- **XGBoost**: Gradient boosting for complex interactions
+- **LightGBM**: Efficient gradient boosting implementation
 
-- **Bland-Altman Plot**
-  - Agreement between predicted and actual age using nested CV predictions
-  - Mean difference and limits of agreement
+**Implementation Requirements:**
+- Use exact same input as `phase3_model_building.py` and `phase3a_en_model_building.py`
+- Load data from: `result/2_selected_features.csv` and `result/1_preprocessed_data.csv`
+- Use same nested CV framework (LOOCV outer, 5-fold inner)
+- Follow same data preprocessing and feature selection from Phase 2
+- Apply appropriate hyperparameter grids for each algorithm
+- Use 1-SE rule for model selection where applicable
+- Maintain exact same output structure as existing scripts, only change prefix
+- Script naming: `phase3b_...`, `phase3c_...`, etc. for consistency
 
-- **Hyperparameter Selection Visualization**
-  - Plot cross-validation error vs. regularization parameter α
-  - Indicate the selected sparsest model within 95% of best performance
+#### Step 5.2: Age Correlation Analysis Based on Residuals
+**Objective**: Address systematic bias where model predicts young people older and old people younger
 
-#### Step 5.2: Feature Importance Analysis
-- Rank CpG sites by absolute coefficient values
-- Bar plot of top contributing features
-- Separate plots for age-positive and age-negative sites
-- Annotate with genomic locations and nearby genes
+**Key Result**: Generate "corrected age diff" vector for each sample - the final corrected age acceleration values
 
-#### Step 5.3: Biological Interpretation
-- Heatmap of selected CpG methylation patterns
-  - Rows: samples (ordered by age)
-  - Columns: top CpG sites
-  - Color scale: methylation level
-- Identify genomic context of top sites:
-  - Gene associations
-  - Regulatory regions
-  - Biological pathways
+**Methodology:**
+1. **Extract residuals** from nested CV predictions for each model
+2. **Linear regression of residuals vs. actual age**:
+   - Model: residual = β₀ + β₁ × actual_age + ε
+   - Test significance of age coefficient (β₁)
+   - Calculate R² for residual-age relationship
+3. **Apply age-based correction**:
+   - If significant correlation exists, adjust predictions:
+   - Corrected_prediction = Original_prediction - (β₀ + β₁ × actual_age)
+4. **Calculate corrected age diff**:
+   - Corrected_age_diff = Corrected_prediction - Actual_age
+   - This is the key result vector for each sample
+5. **Evaluate correction effectiveness**:
+   - Compare MAE/RMSE before and after correction
+   - Assess residual patterns post-correction
+   - Check if age-related bias is eliminated
 
-#### Step 5.4: Generate Output Files
-1. **Selected features**
-   - List of CpG sites (chr, start, end) selected by LASSO
-   - PCC values from Phase 2
-   - Final LASSO model coefficients
-   - p-values
+**Implementation Details:**
+- Create separate script `phase5_residual_analysis.py` to analyze all models
+- Load predictions from each model's CV results (from phase3, phase3a, phase3b-g)
+- Perform linear regression: `residual ~ actual_age` for each model
+- Calculate correlation coefficient, p-value, and R²
+- Apply correction: `corrected_pred = original_pred - (β₀ + β₁ × actual_age)`
+- Generate corrected_age_diff vector for each sample
+- Save correction parameters and corrected age diff vectors
+- Generate residual plots for visual assessment
 
-2. **Model predictions**
-   - Sample ID
-   - Actual age
-   - Predicted age
-   - Age acceleration
-   - Prediction interval (if applicable)
+#### Step 5.3: Model Comparison and Ensemble Analysis
+- **Performance comparison** across all models (LASSO, Elastic Net, Ridge, PLSR, SVR, RF, XGB, LGBM)
+- **Corrected age diff comparison** - primary focus on the key result vectors
+- **Residual pattern analysis** for each model
+- **Feature importance comparison** where applicable
+- **Correlation analysis** between different model predictions
+- **Ensemble modeling** potential (simple averaging, weighted averaging based on corrected performance)
 
-3. **Performance summary**
-   - All metrics (MAE, RMSE, R², correlation)
-   - Cross-validation results
-   - Model parameters
-   - Final number of CpG sites in the LASSO model
-   - Selected regularization parameter (α) value
+#### Step 5.4: Script Structure and Output Consistency
+
+**Input Requirements (Exact Same as Existing Scripts):**
+- Load selected features from: `result/2_selected_features.csv`
+- Load preprocessed data from: `result/1_preprocessed_data.csv`
+- Use same data preprocessing pipeline as `phase3_model_building.py`
+- Handle missing values identically (median imputation)
+- Use same StandardScaler approach
+
+**Output Requirements (Same Structure, Different Prefix):**
+- CV predictions: `[prefix]_cv_predictions.csv` with columns: Sample_ID, Actual_Age, Predicted_Age, Age_Acceleration
+- CV metrics: `[prefix]_cv_metrics.csv` with MAE, RMSE, R², Correlation
+- Model coefficients: `[prefix]_model_coefficients.csv` with CpG_site, coefficient
+- Model intercept: `[prefix]_model_intercept.csv`
+- Trained model: `[prefix]_trained_model.pkl`
+- **Predicted vs Actual Age Plot**: Generate plot using same settings as `3a_model_visualization.py` and save as `[prefix]_predicted_vs_actual.png` in `figure` directory
+- Additional model-specific files where applicable (hyperparameters, feature importance)
+
+**Script Naming Convention:**
+- Ridge: `phase3b_ridge_model_building.py`
+- PLSR: `phase3c_plsr_model_building.py`
+- SVR: `phase3d_svr_model_building.py`
+- Random Forest: `phase3e_rf_model_building.py`
+- XGBoost: `phase3f_xgb_model_building.py`
+- LightGBM: `phase3g_lgbm_model_building.py`
+
+**Visualization Requirements for All Models:**
+- Each model reproduction script must include a `plot_predicted_vs_actual()` function
+- Use exact same settings as `3a_model_visualization.py` and `3b_en_model_visualization.py`
+- Generate scatter plot: Actual Age vs Predicted Age
+- Color points by Age Acceleration using `RdYlBu_r` colormap
+- Include perfect prediction line (black dashed line)
+- Add metrics text box with MAE, RMSE, R², and Correlation
+- Save plot as `[prefix]_predicted_vs_actual.png` in `figure` directory
+- Call plot function in main execution after model training is complete
+
+**Ridge Regression Implementation:**
+- Use `RidgeCV` with built-in cross-validation
+- Hyperparameter grid: `alphas = np.logspace(-4, 4, 100)`
+- No feature selection (all features retained)
+- Apply same nested CV framework as LASSO/Elastic Net
+- **Include predicted vs actual age plot**: Add visualization function to generate plot with same settings as `3a_model_visualization.py` (scatter plot with color-coded age acceleration, perfect prediction line, metrics box, saved as `3b_predicted_vs_actual.png`)
+
+**PLSR Implementation:**
+- Use `PLSRegression` from `sklearn.cross_decomposition`
+- Hyperparameter: number of components (1 to min(n_samples, n_features))
+- Use cross-validation to select optimal components
+- Extract VIP (Variable Importance in Projection) scores for feature importance
+
+**SVR Implementation:**
+- Use `SVR` with RBF kernel as default
+- Hyperparameters: `C` (regularization), `gamma` (kernel coefficient), `epsilon` (tube width)
+- Grid search: `C: [0.1, 1, 10, 100]`, `gamma: ['scale', 0.001, 0.01, 0.1]`, `epsilon: [0.01, 0.1, 0.5]`
+- Standardize features before SVR (important for kernel methods)
+
+**Random Forest Implementation:**
+- Use `RandomForestRegressor` with nested CV
+- Hyperparameters: `n_estimators: [100, 300, 500]`, `max_depth: [3, 5, 10, None]`, `min_samples_split: [2, 5, 10]`
+- Extract feature importance using `feature_importances_`
+- No standardization required (tree-based method)
+
+**XGBoost Implementation:**
+- Use `XGBRegressor` with early stopping
+- Hyperparameters: `n_estimators: [100, 300, 500]`, `max_depth: [3, 5, 7]`, `learning_rate: [0.01, 0.1, 0.3]`, `subsample: [0.8, 1.0]`
+- Extract feature importance using `feature_importances_` with gain metric
+- Handle missing values natively
+
+**LightGBM Implementation:**
+- Use `LGBMRegressor` with early stopping
+- Hyperparameters: `n_estimators: [100, 300, 500]`, `num_leaves: [31, 50, 100]`, `learning_rate: [0.01, 0.1, 0.3]`, `subsample: [0.8, 1.0]`
+- Extract feature importance using `feature_importances_` with gain metric
+- Handle missing values natively
+
+#### Step 5.5: Implementation Details for Additional Models
+
+**Ridge Regression Implementation:**
+- Use `RidgeCV` with built-in cross-validation
+- Hyperparameter grid: `alphas = np.logspace(-4, 4, 100)`
+- No feature selection (all features retained)
+- Apply same nested CV framework as LASSO/Elastic Net
+
+**PLSR Implementation:**
+- Use `PLSRegression` from `sklearn.cross_decomposition`
+- Hyperparameter: number of components (1 to min(n_samples, n_features))
+- Use cross-validation to select optimal components
+- Extract VIP (Variable Importance in Projection) scores for feature importance
+
+**SVR Implementation:**
+- Use `SVR` with RBF kernel as default
+- Hyperparameters: `C` (regularization), `gamma` (kernel coefficient), `epsilon` (tube width)
+- Grid search: `C: [0.1, 1, 10, 100]`, `gamma: ['scale', 0.001, 0.01, 0.1]`, `epsilon: [0.01, 0.1, 0.5]`
+- Standardize features before SVR (important for kernel methods)
+
+**Random Forest Implementation:**
+- Use `RandomForestRegressor` with nested CV
+- Hyperparameters: `n_estimators: [100, 300, 500]`, `max_depth: [3, 5, 10, None]`, `min_samples_split: [2, 5, 10]`
+- Extract feature importance using `feature_importances_`
+- No standardization required (tree-based method)
+
+**XGBoost Implementation:**
+- Use `XGBRegressor` with early stopping
+- Hyperparameters: `n_estimators: [100, 300, 500]`, `max_depth: [3, 5, 7]`, `learning_rate: [0.01, 0.1, 0.3]`, `subsample: [0.8, 1.0]`
+- Extract feature importance using `feature_importances_` with gain metric
+- Handle missing values natively
+
+**LightGBM Implementation:**
+- Use `LGBMRegressor` with early stopping
+- Hyperparameters: `n_estimators: [100, 300, 500]`, `num_leaves: [31, 50, 100]`, `learning_rate: [0.01, 0.1, 0.3]`, `subsample: [0.8, 1.0]`
+- Extract feature importance using `feature_importances_` with gain metric
+- Handle missing values natively
+
+#### Step 5.6: Residual Analysis and Corrected Age Diff Generation
+
+**Primary Output - Corrected Age Diff Vectors:**
+- Generate corrected age diff for each sample from each model
+- Save as: `phase5_corrected_age_diffs.csv` with columns:
+  - Sample_ID
+  - [model]_corrected_age_diff (e.g., lasso_corrected_age_diff, ridge_corrected_age_diff, etc.)
+  - [model]_correction_applied (boolean indicating if significant age-residual correlation was found)
+
+**Correction Parameters Output:**
+- Save correction parameters for each model: `phase5_correction_parameters.csv`
+- Columns: model, beta_0, beta_1, r_squared, p_value, correlation_significant
+
+**Residual Analysis Results:**
+- Before/after correction comparison: `phase5_residual_analysis_summary.csv`
+- Residual vs age plots for each model
+- Distribution of corrected age diffs across age ranges
+1. **Model comparison summary**
+   - Performance metrics for all 8 models (before and after correction)
+   - Corrected age diff statistics and distributions
+   - Feature counts and selection stability
+
+2. **Corrected age diff vectors** (Primary Result)
+   - Corrected age acceleration for each sample from each model
+   - Correction parameters and significance tests
+   - Before/after correction comparison
+
+3. **Model coefficients/feature importance**
+   - Ridge: All coefficients (no sparsity)
+   - PLSR: Component loadings and VIP scores
+   - SVR: Support vectors and coefficients
+   - Tree-based: Feature importance rankings
+   - Boosting: Gain-based importance metrics
+
+4. **Residual analysis results**
+   - Age-residual correlation coefficients and p-values
+   - Correction parameters (β₀, β₁) for each model
+   - Residual plots and bias assessment
 
 ---
 
@@ -353,12 +508,23 @@ Given small sample size (n=105):
 ## Expected Deliverables
 
 1. **Feature List**: Age-correlated CpG sites with statistics from Phase 2
-2. **Trained Model**: LASSO model with selected CpG sites and their coefficients
-3. **Performance Report**: All evaluation metrics including cross-validation results
-4. **Predictions Table**: Ages and acceleration for all samples
-5. **Visualization Suite**: All diagnostic and interpretation plots
-6. **Analysis Script**: Documented, reproducible code
-7. **Model Parameters**: Optimal regularization parameter (α) and selected feature count
+2. **Trained Models**: 
+   - LASSO model with selected CpG sites and their coefficients
+   - Elastic Net model with selected CpG sites and their coefficients
+   - Ridge Regression model with all coefficients
+   - PLSR model with component loadings and VIP scores
+   - SVR model with support vectors and coefficients
+   - Random Forest model with feature importance rankings
+   - XGBoost model with gain-based importance metrics
+   - LightGBM model with feature importance rankings
+3. **Performance Report**: All evaluation metrics including cross-validation results for all 8 models
+4. **Predictions Table**: Ages and acceleration for all samples from each model
+5. **Residual Analysis**: Age correlation results and correction factors for bias adjustment
+6. **Visualization Suite**: All diagnostic and interpretation plots including predicted vs actual age plots for all 8 models
+7. **Analysis Scripts**: Documented, reproducible code for all models following consistent structure
+8. **Model Parameters**: Optimal hyperparameters for each algorithm
+9. **Model Comparison**: Comprehensive performance comparison across all 8 methods
+10. **Corrected Age Diff Vectors**: Primary result - bias-corrected age acceleration values for each sample from all 8 models
 
 ---
 
@@ -366,9 +532,13 @@ Given small sample size (n=105):
 
 - **Data handling**: pandas, numpy
 - **Statistical analysis**: scipy, statsmodels
-- **Machine learning**: scikit-learn
+- **Machine learning**: scikit-learn, scikit-learn.cross_decomposition (PLSR)
+- **Advanced models**: 
+  - XGBoost: xgboost
+  - LightGBM: lightgbm
 - **Visualization**: matplotlib, seaborn
 - **Multiple testing**: statsmodels.stats.multitest
+- **Model persistence**: pickle, joblib
 
 ---
 
@@ -378,11 +548,21 @@ Given small sample size (n=105):
 - [ ] No missing values or handled appropriately
 - [ ] Correlation analysis shows significant age-associated sites
 - [ ] Feature selection criteria clearly defined and applied
-- [ ] Model shows reasonable performance (MAE < 10 years target)
-- [ ] Cross-validation results are stable
-- [ ] No systematic bias in residuals
+- [ ] All 8 models (LASSO, Elastic Net, Ridge, PLSR, SVR, RF, XGB, LGBM) implemented consistently
+- [ ] Nested cross-validation framework applied uniformly across all models
+- [ ] Each model shows reasonable performance (MAE < 10 years target)
+- [ ] Cross-validation results are stable and reproducible
+- [ ] Residual-age correlation analysis completed for bias detection
+- [ ] Age-based correction applied where significant bias detected
+- [ ] Corrected age diff vectors generated for all samples (primary result)
+- [ ] Model comparison metrics calculated and documented
+- [ ] Feature importance/coefficients extracted for interpretability
 - [ ] Visualizations are clear and interpretable
+- [ ] Predicted vs actual age plot generated for each model (Ridge, PLSR, SVR, RF, XGB, LGBM) with consistent settings
 - [ ] Results are biologically plausible
+- [ ] All scripts follow consistent structure and naming conventions (phase3b, phase3c, etc.)
+- [ ] Input/output consistency maintained with existing scripts
+- [ ] Correction parameters properly saved and documented
 
 ---
 
