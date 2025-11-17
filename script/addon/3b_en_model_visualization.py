@@ -294,7 +294,7 @@ Max negative: {df['Age_Acceleration'].min():.2f}"""
     plt.tight_layout()
     
     # Save plot
-    output_path = os.path.join(figure_dir, "3b_age_acceleration.png")
+    output_path = os.path.join(figure_dir, "3b_en_age_acceleration.png")
     plt.savefig(output_path, dpi=300, bbox_inches='tight')
     print(f"Elastic Net age acceleration plot saved to: {output_path}")
     
